@@ -1,0 +1,22 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  roles:
+   - role: tests/test_users_mgmt
+     vars:
+        username: "ansible"
+  tasks:
+
+  - name: check users_mgmt home dir existing
+    assert:
+        that:
+           - "{{ output_users_mgmt_home.stat.exists }}  == true"   
+
+  - name: check users_mgmt sudo privilaged user
+    assert:
+        that:
+           - "{{ output_users_mgmt_sudo.failed }} == false"  
+

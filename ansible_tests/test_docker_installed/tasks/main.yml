@@ -1,0 +1,6 @@
+---
+# tasks file for test_docker_installed
+- name: Test installation of docker
+  command: docker ps
+  register: output_docker_installed 
+  failed_when: "'bash: docker: command not found' in output_docker_installed"

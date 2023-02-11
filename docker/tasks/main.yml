@@ -1,0 +1,98 @@
+---
+# tasks file for docker
+
+- name: Install System dependencies for Ubuntu
+  apt:
+    update_cache: yes
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg2
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "20.04"
+    - ansible_distribution_file_variety == "Debian" 
+
+- name: Pre-config docker service from local account.
+  shell: |
+      source /etc/os-release && \
+      curl -fsSL https://download.docker.com/linux/${ID}/gpg | sudo apt-key add && \
+      echo "deb [arch=amd64] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/docker.list
+  args:
+     executable: /usr/bin/bash 
+  when:
+    - molecule_yml is not defined
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "20.04"
+    - ansible_distribution_file_variety == "Debian" 
+
+- name: Pre-config docker service from local account. MOLECULE
+  shell: |
+      source /etc/os-release && \
+      curl -fsSL https://download.docker.com/linux/${ID}/gpg | apt-key add && \
+      echo "deb [arch=amd64] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" | tee /etc/apt/sources.list.d/docker.list
+  args:
+     executable: /usr/bin/bash 
+  when:
+    - molecule_yml is defined
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "20.04"
+    - ansible_distribution_file_variety == "Debian" 
+
+
+- name: Install Docker packages for Ubuntu
+  apt:
+    update_cache: yes
+    pkg:
+      - docker-ce
+      - docker-ce-cli 
+      - containerd.io
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "20.04"
+    - ansible_distribution_file_variety == "Debian"
+  
+- name: Install Yum utils packages for Centos-7
+  yum:
+    name:
+       - yum-utils
+    state: latest
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_version == "7.9"
+    - ansible_distribution_file_variety == "RedHat"
+
+- name: Install Yum config docker repo for Centos-7
+  shell: |
+    yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+  args:
+     executable: /usr/bin/bash 
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_version == "7.9"
+    - ansible_distribution_file_variety == "RedHat"
+
+- name: Install Yum Docker packages for Centos-7
+  yum:
+    name:
+       - docker-ce 
+       - docker-ce-cli
+       - containerd.io
+       - docker-compose-plugin
+    state: latest
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_version == "7.9"
+    - ansible_distribution_file_variety == "RedHat"
+
+
+
+- name: Enable Docker service
+  service:
+     name: docker
+     enabled: yes
+  notify: start_docker
+  when: molecule_yml is not defined

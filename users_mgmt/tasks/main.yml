@@ -1,0 +1,102 @@
+---
+# tasks file for users_mgmt
+  - name: Install sudo for testing Ubuntu 20.04 purpose MOLECULE
+    apt:
+      update_cache: no
+      pkg:
+        - sudo
+    when:
+      - molecule_yml is defined
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version == "20.04"
+      - ansible_distribution_file_variety == "Debian" 
+
+  - name: Install sudo for testing CentOS 7 purpose MOLECULE
+    yum:
+      name:
+        - sudo
+      state: latest
+    when:
+      - molecule_yml is defined
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_version == "7.9"
+      - ansible_distribution_file_variety == "RedHat"
+
+
+
+  - name: Setup all admins
+    user:
+      name: "{{ item.username }}"
+      state: "{{ item.state | default('present') }}"
+      shell: "{{ item.shell | default('/bin/bash') }}"
+      group: "{{ admin_group }}"
+      remove: yes
+    when: item.username is defined
+    with_items:
+      - "{{ server_admin_list }}"
+  
+#  - name: Setup all users
+#    user:
+#      name: "{{ item.username }}"
+#      state: "{{ item.state | default('present') }}"
+#      shell: "{{ item.shell | default('/bin/bash') }}"
+#      group: "{{ users_group }}"
+#      remove: yes
+#    when: item.username is defined
+#    with_items:
+#     - "{{ users_server_list }}"
+     
+
+  
+  - name: Add SSH-keys to admins
+    authorized_key:
+      user: "{{ item.0.username }}"
+      key: "{{ item.1 }}"
+    with_subelements:
+      - "{{ server_admin_list }}"
+      - keys.active
+      - flags:
+        skip_missing: True
+    when: item.0.state != "absent"
+
+#  - name: Add SSH-keys to users
+#    authorized_key:
+#      user: "{{ item.0.username }}"
+#      key: "{{ item.1 }}"
+#    with_subelements:
+#      - "{{ users_server_list }}"
+#      - keys.active
+#      - flags:
+#        skip_missing: True
+#    when: item.0.state != "absent"
+
+  - name: Remove old SSH-keys from admins
+    authorized_key:
+      user: "{{ item.0.username }}"
+      key: "{{ item.1 }}"
+      state: absent
+    with_subelements:
+      - "{{ server_admin_list }}"
+      - keys.disabled
+      - flags:
+        skip_missing: True
+    when: item.0.state != "absent"
+
+  - name: Remove old SSH-keys from users
+    authorized_key:
+      user: "{{ item.0.username }}"
+      key: "{{ item.1 }}"
+      state: absent
+    with_subelements:
+      - "{{ server_admin_list }}"
+      - keys.disabled
+      - flags:
+        skip_missing: True
+    when: item.0.state != "absent"
+
+  - name: Add admin group to sudoers
+    lineinfile: dest=/etc/sudoers regexp="^%{{ admin_group }}" line="%{{ admin_group }} ALL=(ALL) NOPASSWD:ALL"
+
+    
+  - name: Disable Requiretty from sudoers
+    lineinfile: dest=/etc/sudoers regexp="Defaults    requiretty" line="#Defaults    requiretty"
