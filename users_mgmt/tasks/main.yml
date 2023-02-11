@@ -11,6 +11,18 @@
       - ansible_distribution_version == "20.04"
       - ansible_distribution_file_variety == "Debian" 
 
+
+  - name: Install sudo for testing Ubuntu 22.04 purpose MOLECULE
+    apt:
+      update_cache: no
+      pkg:
+        - sudo
+    when:
+      - molecule_yml is defined
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version == "22.04"
+      - ansible_distribution_file_variety == "Debian" 
+
   - name: Install sudo for testing CentOS 7 purpose MOLECULE
     yum:
       name:

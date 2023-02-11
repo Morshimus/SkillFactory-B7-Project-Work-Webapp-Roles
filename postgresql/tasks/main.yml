@@ -15,6 +15,15 @@
     - ansible_distribution_version == "20.04"
     - ansible_distribution_file_variety == "Debian" 
 
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  when:
+    - not pg_data_result.stat.exists 
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "22.04"
+    - ansible_distribution_file_variety == "Debian" 
+
 - name: Install System dependencies for Ubuntu
   apt:
     update_cache: no
@@ -27,6 +36,20 @@
   when:
     - ansible_distribution == "Ubuntu"
     - ansible_distribution_version == "20.04"
+    - ansible_distribution_file_variety == "Debian" 
+
+- name: Install System dependencies for Ubuntu
+  apt:
+    update_cache: no
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg1
+  run_once: true
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "22.04"
     - ansible_distribution_file_variety == "Debian" 
 
 #- name: Pre-config postgresql repository.
@@ -54,11 +77,42 @@
     - ansible_distribution_version == "20.04"
     - ansible_distribution_file_variety == "Debian"    
 
+- name: Pre-config postgresql repository
+  shell: |
+      curl https://www.postgresql.org/media/keys/ACCC4CF8.asc |  \
+       gpg --dearmor | tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg >/dev/null && \
+      echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+  args:
+     executable: /usr/bin/bash 
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "22.04"
+    - ansible_distribution_file_variety == "Debian"  
+
 - name: Update apt cache
   apt:
     update_cache: yes
   when:
     - not pg_data_result.stat.exists 
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "20.04"
+    - ansible_distribution_file_variety == "Debian" 
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  when:
+    - not pg_data_result.stat.exists 
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "22.04"
+    - ansible_distribution_file_variety == "Debian" 
+
+- name: Install Postgresql packages for Ubuntu
+  apt:
+    update_cache: no
+    pkg:
+      - "postgresql-{{ pg_version }}"
+  when:
     - ansible_distribution == "Ubuntu"
     - ansible_distribution_version == "20.04"
     - ansible_distribution_file_variety == "Debian" 
@@ -70,7 +124,7 @@
       - "postgresql-{{ pg_version }}"
   when:
     - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "20.04"
+    - ansible_distribution_version == "22.04"
     - ansible_distribution_file_variety == "Debian" 
 
 - name: Postgresql data root dir creation
@@ -91,6 +145,17 @@
     - molecule_yml is defined
     - ansible_distribution == "Ubuntu"
     - ansible_distribution_version == "20.04"
+    - ansible_distribution_file_variety == "Debian" 
+
+- name: Install sudo for testing  purpose MOLECULE
+  apt:
+    update_cache: no
+    pkg:
+      - sudo
+  when:
+    - molecule_yml is defined
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "22.04"
     - ansible_distribution_file_variety == "Debian" 
 
 - name: Initialize postgresql db at new location
