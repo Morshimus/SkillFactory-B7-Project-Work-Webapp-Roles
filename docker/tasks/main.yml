@@ -74,6 +74,10 @@
     - ansible_distribution_file_variety == "RedHat"
 
 
+- name: Enable Docker Service MOLECULE
+  command: update-alternatives --set iptables /usr/sbin/iptables-legacy 
+  notify: start_docker
+  when: molecule_yml is defined
 
 - name: Enable Docker service
   service:
