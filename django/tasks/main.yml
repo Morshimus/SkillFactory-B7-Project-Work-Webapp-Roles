@@ -117,10 +117,18 @@
     name: "sf_web_tst"
     state: absent
 
+- name: Configure Docker Container with django  app to test pg database
+  docker_container:
+         name: sf_web_tst
+         image: morsh92/skillfactory-web-pg:latest
+         command: python3 manage.py migrate
+
 - name: Run Docker Container with django  app to test pg database
   docker_container:
          name: sf_web_tst
          image: morsh92/skillfactory-web-pg:latest
+         state: started
+         restart: yes
          ports:
           - "8000:8000"
          volumes:
