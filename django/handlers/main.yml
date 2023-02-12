@@ -1,15 +1,2 @@
 ---
 # handlers file for django
-- name: Restart PostgreSQL Service
-  listen: restart_pgsql
-  service:
-     name: postgresql
-     state: restarted
-  when: molecule_yml is not defined
-
-- name: Restart PostgreSQL Service MOLECULE
-  listen: restart_pgsql
-  shell: "sudo -u postgres /lib/postgresql/{{ pg_version }}/bin/pg_ctl  restart -D /etc/postgresql/{{ pg_version }}/main -s -w -t 15"
-  args:
-     executable: /bin/bash
-  when: molecule_yml is  defined

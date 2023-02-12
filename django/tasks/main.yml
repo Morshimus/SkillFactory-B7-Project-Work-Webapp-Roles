@@ -18,7 +18,6 @@
   include_role:
    name: postgresql
   vars:
-     pg_version: "14"
      pg_data_root: /opt/pg_data  
   run_once: true
   when: molecule_yml is defined
@@ -47,91 +46,116 @@
     state: directory
     mode: '0755'
 
-- name: Create directory for app/tst/static/polls
+- name: Create directory for static/polls
   file:
     path: "{{ django_app_static }}"
     state: directory
     mode: '0755'
 
-- name: Create directory for app/tst/templates/polls
+- name: Create directory for templates/polls
   file:
     path: "{{ django_app_templates }}"
     state: directory
     mode: '0755'
 
-- name: Copy static file favicon.ico to app/tst/static/polls
+- name: Copy static file favicon.ico to static/polls
   copy:
     src: favicon.ico
     dest: "{{ django_app_static }}"
 
-- name: Copy static file skillfactory.png to app/tst/static/polls
+- name: Copy static file skillfactory.png to static/polls
   copy:
     src: skillfactory.png
     dest: "{{ django_app_static }}"
 
-- name: Copy static file style.css to app/tst/static/polls
+- name: Copy static file style.css to static/polls
   copy:
     src: style.css
     dest: "{{ django_app_static }}"
 
-- name: Copy static file style.css to app/tst/templates/polls
+- name: Copy static file style.css to templates/polls
   copy:
     src: index.html
     dest: "{{ django_app_templates }}"
 
-- name: Create Django test conf file
+- name: Create Django conf file
   template:
-      src: django_tst.conf.j2
+      src: django.conf.j2
       dest: "{{ django_app_root }}/django.conf"
       backup: yes
       mode: '0755'    
 
 - name: Configure line for access local unix for django test pg db
-  lineinfile: dest=/etc/postgresql/{{ pg_version }}/main/pg_hba.conf regexp="^local   all             {{ pg_db_user_tst }}                                  md5" line="local   all             {{ pg_db_user_tst }}                                  md5" 
-  notify: restart_pgsql
+  lineinfile: dest=/etc/postgresql/{{ pg_version }}/main/pg_hba.conf regexp="^local   all             {{ pg_db_user }}                                  md5" line="local   all             {{ pg_db_user }}                                  md5" 
+  when: is_local
 
 - name: Configure line for accessing local docker farm to django test pg db
   lineinfile: dest=/etc/postgresql/{{ pg_version }}/main/pg_hba.conf regexp="^host    all             all             172.17.0.0/16           scram-sha-256" line="host    all             all             172.17.0.0/16           scram-sha-256" 
-  notify: restart_pgsql
+  when: is_local
 
 - name: Configure Postgresql listen address for docker containers
   lineinfile: dest=/etc/postgresql/{{ pg_version }}/main/postgresql.conf regexp="^#listen_addresses = 'localhost'         \# what IP address(es) to listen on;" line="listen_addresses = '172.17.0.1'" 
-  notify: restart_pgsql
+  when: is_local
 
 
-
-- name: Create Postgresql Queries for configure django_test db
+- name: Create Postgresql Queries for configure django db
   template:
       src: postgresql.queries.j2
       dest: "{{ django_app_root }}/postgresql_create.sh"
       backup: yes
       mode: '0755' 
+  when: is_local
 
-- name: Create Postgresql local test django db
+- name: Create Postgresql local django db
   shell: "{{ django_app_root }}/postgresql_create.sh"
   args:
      executable: /usr/bin/bash  
+  when: is_local
+
+- name: Restart PostgreSQL Service MOLECULE
+  shell: "sudo -u postgres /lib/postgresql/{{ pg_version }}/bin/pg_ctl  restart -D /etc/postgresql/{{ pg_version }}/main -s -w -t 15"
+  args:
+     executable: /bin/bash
+  when: 
+     - molecule_yml is  defined
+     - is_local
+
+- name: Restart PostgreSQL Service
+  service:
+     name: postgresql
+     state: restarted
+  when: 
+     - molecule_yml is not defined
+     - is_local
+
 
 - name: Remove container if it was created before.
   docker_container:
-    name: "sf_web_tst"
+    name: "{{ container_name }}"
     state: absent
 
-- name: Configure Docker Container with django  app to test pg database
-  docker_container:
-         name: sf_web_tst
-         image: morsh92/skillfactory-web-pg:latest
-         command: python3 manage.py migrate
 
-- name: Run Docker Container with django  app to test pg database
+- name: Run Docker Container with django  app to pg database
   docker_container:
-         name: sf_web_tst
+         name: "{{ container_name }}"
          image: morsh92/skillfactory-web-pg:latest
          state: started
          restart: yes
          ports:
-          - "8000:8000"
+          - "{{ container_port }}:8000"
          volumes:
-          - /srv/app/tst/static:/app/static:rw
-          - /srv/app/tst/templates:/app/templates:rw
-          - /srv/app/tst/django.conf:/app/django.conf:rw
+          - "{{ django_app_root }}/static:/app/static:rw"
+          - "{{ django_app_root }}/templates:/app/templates:rw"
+          - "{{ django_app_root }}/django.conf:/app/django.conf:rw"
+
+
+- name: Check polls url of Django Skillfactory container
+  command: "curl http://localhost:{{ container_port }}/polls/"
+  register: output_django_check
+  failed_when: " output_django_check.stdout == 'somestaff' "
+
+- name: Activate Docker Django SkillFactory Container
+  shell: "docker exec {{ container_name }}  python3 manage.py migrate && docker restart {{ container_name }}"
+  args:
+    executable: /bin/bash
+  when: "'<link rel=\"stylesheet\" href=\"/static/polls/style.css\">' not in output_django_check.stdout"
