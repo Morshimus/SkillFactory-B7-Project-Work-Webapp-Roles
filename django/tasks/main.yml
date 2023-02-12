@@ -1,2 +1,19 @@
 ---
 # tasks file for django
+- name: Install Docker for tests MOLECULE
+  include_role:
+   name: docker
+  when: molecule_yml is defined
+
+- name: Install Postgresql for tests MOLECULE
+  include_role:
+   name: postgresql
+  vars:
+     pg_version: "14"
+     pg_data_root: /opt/pg_data  
+  run_once: true
+  when: molecule_yml is defined
+
+- name: Pull Docker Container of SkillFactory Django application
+  docker:
+  

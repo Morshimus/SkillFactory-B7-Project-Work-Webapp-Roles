@@ -129,7 +129,9 @@ function molecule {
      if(Test-Path -Path $path/molecule/$role) {write-host -f magenta "This role already exist in molecule"}else{
      docker exec -ti molecule-$role  /bin/sh -c  "molecule init role $org.$role -d docker"
      }
-
+     
+     try{. $path/$role/required_roles.ps1}catch{"There is no required_roles.ps1 file!"}
+     
      try{Copy-Item -ErrorAction Stop -Recurse -Force  $path/$role/tasks/* $path/molecule/$role/tasks}catch{write-host -f magenta "There is no folder tasks!"}
 
      try{Copy-Item -ErrorAction Stop -Recurse -Force  $path/$role/handlers/* $path/molecule/$role/handlers}catch{write-host -f magenta "There is no folder handlers!"}
@@ -143,6 +145,10 @@ function molecule {
      try{Copy-Item -ErrorAction Stop -Recurse -Force  $path/$role/vars/* $path/molecule/$role/vars}catch{write-host -f magenta "There is no folder vars!"}
 
      try{Copy-Item  -ErrorAction Stop -Recurse -Force  $path/$role/defaults/* $path/molecule/$role/defaults}catch{write-host -f magenta "There is no folder defaults!"}
+
+     # try{Copy-Item  -ErrorAction Stop -Recurse -Force  $path/$role/meta/* $path/molecule/$role/meta}catch{write-host -f magenta "There is no folder meta!"}
+      
+     try{$rolereq | ForEach-Object {Copy-Item  -ErrorAction Stop -Recurse -Force  $path/$_ $path/molecule/$role/molecule/default/roles/$_ }}catch{write-host -f magenta "There is no such role folder in Project!"}
 
      try{Copy-Item   -ErrorAction Stop -Force  $path/$role/verify.yml $path/molecule/$role/molecule/default/verify.yml  }catch{write-host -f magenta "There is no file verify.yml!"}
     
