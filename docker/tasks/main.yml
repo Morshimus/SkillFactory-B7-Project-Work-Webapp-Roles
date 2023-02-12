@@ -10,75 +10,20 @@
       - gnupg2
   when:
     - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "20.04"
-    - ansible_distribution_file_variety == "Debian" 
-
-
-- name: Install System dependencies for Ubuntu
-  apt:
-    update_cache: yes
-    pkg:
-      - ca-certificates
-      - curl
-      - gnupg1
-  when:
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "22.04"
-    - ansible_distribution_file_variety == "Debian"     
-
-- name: Pre-config docker service from local account.
-  shell: |
-      source /etc/os-release && \
-      curl -fsSL https://download.docker.com/linux/${ID}/gpg | sudo apt-key add && \
-      echo "deb [arch=amd64] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/docker.list
-  args:
-     executable: /usr/bin/bash 
-  when:
-    - molecule_yml is not defined
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "22.04"
+    - ansible_distribution_version == "20.04" or "22.04"
     - ansible_distribution_file_variety == "Debian" 
 
 - name: Pre-config docker service from local account.
   shell: |
       source /etc/os-release && \
-      curl -fsSL https://download.docker.com/linux/${ID}/gpg | sudo apt-key add && \
-      echo "deb [arch=amd64] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/docker.list
+      curl -fsSL https://download.docker.com/linux/${ID}/gpg |  apt-key add && \
+      echo "deb [arch=amd64] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" |  tee /etc/apt/sources.list.d/docker.list
   args:
      executable: /usr/bin/bash 
   when:
-    - molecule_yml is not defined
     - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "20.04"
+    - ansible_distribution_version == "20.04" or "22.04"
     - ansible_distribution_file_variety == "Debian" 
-
-- name: Pre-config docker service from local account. MOLECULE
-  shell: |
-      source /etc/os-release && \
-      curl -fsSL https://download.docker.com/linux/${ID}/gpg | apt-key add && \
-      echo "deb [arch=amd64] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" | tee /etc/apt/sources.list.d/docker.list
-  args:
-     executable: /usr/bin/bash 
-  when:
-    - molecule_yml is defined
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "20.04"
-    - ansible_distribution_file_variety == "Debian" 
-
-
-- name: Pre-config docker service from local account. MOLECULE
-  shell: |
-      source /etc/os-release && \
-      curl -fsSL https://download.docker.com/linux/${ID}/gpg | apt-key add && \
-      echo "deb [arch=amd64] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" | tee /etc/apt/sources.list.d/docker.list
-  args:
-     executable: /usr/bin/bash 
-  when:
-    - molecule_yml is defined
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "22.04"
-    - ansible_distribution_file_variety == "Debian" 
-
 
 - name: Install Docker packages for Ubuntu
   apt:
@@ -89,21 +34,10 @@
       - containerd.io
   when:
     - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "20.04"
+    - ansible_distribution_version == "20.04" or "22.04"
     - ansible_distribution_file_variety == "Debian"
 
-- name: Install Docker packages for Ubuntu
-  apt:
-    update_cache: yes
-    pkg:
-      - docker-ce
-      - docker-ce-cli 
-      - containerd.io
-  when:
-    - ansible_distribution == "Ubuntu"
-    - ansible_distribution_version == "22.04"
-    - ansible_distribution_file_variety == "Debian"
-  
+
 - name: Install Yum utils packages for Centos-7
   yum:
     name:
