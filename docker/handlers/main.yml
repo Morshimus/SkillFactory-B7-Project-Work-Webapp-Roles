@@ -11,6 +11,8 @@
 - name: Start Docker Service MOLECULE
   listen: start_docker
   shell: /etc/init.d/docker start
+  register: output_docker_service_result
+  failed_when: "' * Starting Docker: docker' not in output_docker_service_result.stdout"
   args:
      executable: /usr/bin/bash  
   when: molecule_yml is defined 

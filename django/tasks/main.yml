@@ -4,6 +4,15 @@
   include_role:
    name: docker
   when: molecule_yml is defined
+  
+- name: Start Docker Service MOLECULE
+  shell: /etc/init.d/docker start
+  args:
+     executable: /usr/bin/bash  
+  register: output_docker_service
+  failed_when: "'bash: /etc/init.d/docker: No such file or directory' in output_docker_service.stdout "
+  when: molecule_yml is defined 
+
 
 - name: Install Postgresql for tests MOLECULE
   include_role:
@@ -14,12 +23,107 @@
   run_once: true
   when: molecule_yml is defined
 
+- name: Start PostgreSQL Service MOLECULE
+  shell: "sudo -u postgres /lib/postgresql/{{ pg_version }}/bin/pg_ctl  start -D /etc/postgresql/{{ pg_version }}/main -s -w -t 15"
+  args:
+     executable: /bin/bash
+  register: output_docker_service
+  failed_when: "'No such file or directory' in output_docker_service.stdout "
+  when: molecule_yml is  defined
+
+
 - name: Install python library docker-py
   pip:
     name: docker-py
 
-- name: Pull Docker Container of SkillFactory Django application
+- name: Pull Docker Image of SkillFactory Django application
   docker_image:
-       name: morsh92/skillfactory-web-pg:latest
+       name: morsh92/skillfactory-web-pg
        source: pull
   
+- name: Create directory for app
+  file:
+    path: "{{ django_app_root }}"
+    state: directory
+    mode: '0755'
+
+- name: Create directory for app/tst/static/polls
+  file:
+    path: "{{ django_app_static }}"
+    state: directory
+    mode: '0755'
+
+- name: Create directory for app/tst/templates/polls
+  file:
+    path: "{{ django_app_templates }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy static file favicon.ico to app/tst/static/polls
+  copy:
+    src: favicon.ico
+    dest: "{{ django_app_static }}"
+
+- name: Copy static file skillfactory.png to app/tst/static/polls
+  copy:
+    src: skillfactory.png
+    dest: "{{ django_app_static }}"
+
+- name: Copy static file style.css to app/tst/static/polls
+  copy:
+    src: style.css
+    dest: "{{ django_app_static }}"
+
+- name: Copy static file style.css to app/tst/templates/polls
+  copy:
+    src: index.html
+    dest: "{{ django_app_templates }}"
+
+- name: Create Django test conf file
+  template:
+      src: django_tst.conf.j2
+      dest: "{{ django_app_root }}/django.conf"
+      backup: yes
+      mode: '0755'    
+
+- name: Configure line for access local unix for django test pg db
+  lineinfile: dest=/etc/postgresql/{{ pg_version }}/main/pg_hba.conf regexp="^local   all             {{ pg_db_user_tst }}                                  md5" line="local   all             {{ pg_db_user_tst }}                                  md5" 
+  notify: restart_pgsql
+
+- name: Configure line for accessing local docker farm to django test pg db
+  lineinfile: dest=/etc/postgresql/{{ pg_version }}/main/pg_hba.conf regexp="^host    all             all             172.17.0.0/16           scram-sha-256" line="host    all             all             172.17.0.0/16           scram-sha-256" 
+  notify: restart_pgsql
+
+- name: Configure Postgresql listen address for docker containers
+  lineinfile: dest=/etc/postgresql/{{ pg_version }}/main/postgresql.conf regexp="^#listen_addresses = 'localhost'         \# what IP address(es) to listen on;" line="listen_addresses = '172.17.0.1'" 
+  notify: restart_pgsql
+
+
+
+- name: Create Postgresql Queries for configure django_test db
+  template:
+      src: postgresql.queries.j2
+      dest: "{{ django_app_root }}/postgresql_create.sh"
+      backup: yes
+      mode: '0755' 
+
+- name: Create Postgresql local test django db
+  shell: "{{ django_app_root }}/postgresql_create.sh"
+  args:
+     executable: /usr/bin/bash  
+
+- name: Remove container if it was created before.
+  docker_container:
+    name: "sf_web_tst"
+    state: absent
+
+- name: Run Docker Container with django  app to test pg database
+  docker_container:
+         name: sf_web_tst
+         image: morsh92/skillfactory-web-pg:latest
+         ports:
+          - "8000:8000"
+         volumes:
+          - /srv/app/tst/static:/app/static:rw
+          - /srv/app/tst/templates:/app/templates:rw
+          - /srv/app/tst/django.conf:/app/django.conf:rw
