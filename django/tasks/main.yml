@@ -30,6 +30,9 @@
   failed_when: "'No such file or directory' in output_docker_service.stdout "
   when: molecule_yml is  defined
 
+- name: Install python3-pip for Ubuntu
+  apt:
+    name: python3-pip
 
 - name: Install python library docker-py
   pip:
