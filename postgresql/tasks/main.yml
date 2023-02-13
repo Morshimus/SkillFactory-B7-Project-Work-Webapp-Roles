@@ -3,7 +3,7 @@
 
 - name: Check that the PostgreSQL data root exist
   stat:
-    path: "{{ pg_data_root }}"
+    path: "{{ pg_data_root }}/pg_wal"
   register: pg_data_result
 
 - name: Update apt cache
