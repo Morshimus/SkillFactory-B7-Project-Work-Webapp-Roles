@@ -131,6 +131,12 @@
      - molecule_yml is not defined
      - is_local
 
+- name: Pause for 5 minutes to postgresql restart.
+  pause:
+    seconds: 10
+  when:
+     - molecule_yml is not defined
+     - is_local
 
 - name: Remove container if it was created before.
   docker_container:
