@@ -131,9 +131,9 @@
      - molecule_yml is not defined
      - is_local
 
-- name: Pause for 5 minutes to postgresql restart.
+- name: Pause for 50 seconds to postgresql restart.
   pause:
-    seconds: 10
+    seconds: 50
   when:
      - molecule_yml is not defined
      - is_local
